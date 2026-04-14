@@ -16,6 +16,7 @@ app.get("/posts", async (req, res) => {
             SELECT 
                 u.id,
                 u.nome, 
+                p.titulo,
                 p.conteudo, 
                 p.criado_em,
                 p.id AS post_id
@@ -50,6 +51,30 @@ app.post("/posts", async (req, res) => {
         console.log("Deu ruim ao criar post... = " + erro);
         res.status(500).json({
             erro: "Erro ao criar post."
+        })
+    }
+});
+
+// Rota posts PARA ATUALIZAR POST
+
+app.put("/posts/:id", async (req, res) => {
+    try {
+        const {id} = req.params;
+        const {titulo, conteudo} = req.body;
+
+        const resultado = await pool.query(
+            `UPDATE post SET titulo=$1, conteudo=$2 
+            WHERE id=$3 
+            RETURNING *`, [titulo, conteudo, id]
+        );
+        res.status(200).json({
+            mensagem: "Post atualizado com sucesso!",
+            post: resultado.rows[0]
+        });
+    } catch (erro) {
+        console.log("Deu erro na atualização... = " + erro);
+        res.status(500).json({
+            erro: "Erro ao atualizar post."
         })
     }
 });

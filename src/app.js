@@ -2,7 +2,6 @@ const express = require("express");
 const pool = require("./config/db");
 
 const app = express();
-// app.get(express.json());
 app.use(express.json());
 
 app.get("/", (req, res) => {
@@ -76,6 +75,26 @@ app.put("/posts/:id", async (req, res) => {
         res.status(500).json({
             erro: "Erro ao atualizar post."
         })
+    }
+});
+
+app.delete("/posts/:id", async (req, res) => {
+    try {
+        const {id} = req.params;
+        const resultado = await pool.query(`
+            DELETE FROM post WHERE id =$1
+            RETURNING *
+        `, [id],
+        );
+        res.json({
+            mensagem: "Post deletado com sucesso!",
+            post: resultado.rows[0],
+        });
+    } catch (erro) {
+        console.log("Erro ao deletar.... = " + erro);
+        res.status(500).json({
+            erro: "Erro ao deletar post"
+        });
     }
 });
 

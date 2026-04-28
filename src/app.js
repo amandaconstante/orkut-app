@@ -53,7 +53,6 @@ app.post("/usuarios", validarUsuarios, async (req, res) => {
 });
 
 app.get("/posts", async (req, res) => {
-    console.log("chegou aqui..1");
     try {
         const resultado = await pool.query(`
             SELECT 
@@ -68,9 +67,8 @@ app.get("/posts", async (req, res) => {
             ORDER BY p.criado_em DESC
         `);
         res.json(resultado.rows);
-            console.log("passou aqui..2");
     } catch (erro) {
-        console.log("deu ruim..3 = " + erro);
+        console.log("Erro get/post = ", erro);
         res.status(500).json({erro: "Erro ao obter post"});
     }
 });
@@ -91,7 +89,6 @@ app.post("/posts", auth, validarPost, async (req, res) => {
             post: resultado.rows[0],
         });
     } catch (erro) {
-        console.log("Deu ruim ao criar post... = " + erro);
         res.status(500).json({
             erro: "Erro ao criar post."
         })
@@ -100,41 +97,34 @@ app.post("/posts", auth, validarPost, async (req, res) => {
 
 /// Rota posts PARA ATUALIZAR POST
 
-app.put("/posts/:id", auth, validarPost, async (req, res) => {
+app.put("/posts/:id", auth, async (req, res) => {
     try {
         const { id } = req.params;
         const { titulo, conteudo } = req.body;
 
-        const post = await pool.query(`
-                SELECT * FROM post WHERE id=$1
-            `, [id]);
-        
+        const post = await pool.query(`SELECT * FROM post WHERE id=$1`, [id]);
+
         if (post.rows.length === 0) {
-            return res.status(404).json({
-                mensagem: "post não encontrado."
-            });
-        }
+            return res.status(404).json({mensagem: "Post não encontrado"})
+        };
 
         if (post.rows[0].usuario_id !== req.usuario.id) {
-            return res.status(403).json({
-                mensagem: "usuário sem permissão"
-            });
-        }
+            return res.status(403).json({mensagem: "Sem permissão"})
+        };
 
         const resultado = await pool.query(
-            `UPDATE post SET titulo=$1, conteudo=$2 
-            WHERE id=$3 
-            RETURNING *`, [titulo, conteudo, id]
+            `UPDATE post SET titulo=$1, conteudo=$2 WHERE id=$3 RETURNING *`, [titulo, conteudo, id],
         );
+        
         res.status(200).json({
-            mensagem: "Post atualizado com sucesso!",
-            post: resultado.rows[0]
+            mensagem: "Post atualizado com sucesso",
+            post: resultado.rows[0],
         });
     } catch (erro) {
-        console.log("Deu erro na atualização... = " + erro);
+        console.log("Erro put-post = ", erro);
         res.status(500).json({
             erro: "Erro ao atualizar post."
-        })
+        });
     }
 });
 
@@ -168,7 +158,6 @@ app.delete("/posts/:id", auth, async (req, res) => {
             post: resultado.rows[0],
         });
     } catch (erro) {
-        console.log("Erro ao deletar.... = " + erro);
         res.status(500).json({
             erro: "Erro ao deletar post"
         });
@@ -203,12 +192,9 @@ app.post("/login", async (req, res) => {
             process.env.JWT_SECRET,
             {expiresIn: '1h'}
         );
-
-        console.log("login secret: ", process.env.JWT_SECRET);
         res.json({token});
 
     } catch (error) {
-        console.log("Erro== " + erro);
         return res.status(500).json({
             mensagem: "Erro interno do servidor",
         });

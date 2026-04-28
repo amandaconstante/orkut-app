@@ -3,6 +3,7 @@ const express = require("express");
 const pool = require("./config/db");
 const validarPost = require("./validacao/post");
 const jwt = require("jsonwebtoken");
+const auth = require("./auth/authLogin");
 
 const app = express();
 app.use(express.json());
@@ -36,15 +37,15 @@ app.get("/posts", async (req, res) => {
 
 /// ROTA POST PARA posts
 
-app.post("/posts", async (req, res) => {
+app.post("/posts", auth, validarPost, async (req, res) => {
     try {
-        const { titulo, conteudo, usuario_id } = req.body;
+        const { titulo, conteudo } = req.body;
 
         const resultado = await pool.query(`
             INSERT INTO post (titulo, conteudo, usuario_id) 
             VALUES ($1, $2, $3) 
             RETURNING *
-        `, [titulo, conteudo, usuario_id]);
+        `, [titulo, conteudo, req.usuario.id]);
         res.status(201).json({
             mensagem: "Post criado com sucesso!",
             post: resultado.rows[0],
@@ -59,7 +60,7 @@ app.post("/posts", async (req, res) => {
 
 /// Rota posts PARA ATUALIZAR POST
 
-app.put("/posts/:id", async (req, res) => {
+app.put("/posts/:id", validarPost, async (req, res) => {
     try {
         const {id} = req.params;
         const {titulo, conteudo} = req.body;

@@ -1,5 +1,8 @@
+require("dotenv").config();
 const express = require("express");
 const pool = require("./config/db");
+const validarPost = require("./validacao/post");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 app.use(express.json());
@@ -31,7 +34,7 @@ app.get("/posts", async (req, res) => {
     }
 });
 
-// ROTA POST PARA posts
+/// ROTA POST PARA posts
 
 app.post("/posts", async (req, res) => {
     try {
@@ -54,7 +57,7 @@ app.post("/posts", async (req, res) => {
     }
 });
 
-// Rota posts PARA ATUALIZAR POST
+/// Rota posts PARA ATUALIZAR POST
 
 app.put("/posts/:id", async (req, res) => {
     try {
@@ -96,6 +99,45 @@ app.delete("/posts/:id", async (req, res) => {
             erro: "Erro ao deletar post"
         });
     }
+});
+
+// ROTA DE LOGIN
+app.post("/login", async (req, res) => {
+    const {email, senha} = req.body;
+
+    try {
+        const usuario = await pool.query(`
+            SELECT * FROM usuarios WHERE email=$1
+        `, [email]);
+
+        if (usuario.rows.length === 0) {
+            return res.status(400).json({
+            mensagem: "Usuário não encontrado"
+            });
+        }
+
+        if (senha !== usuario.rows[0].senha) {
+            return res.status(400).json({
+                mensagem: "Senha inválida!"
+            });
+        }
+
+        const token = jwt.sign(
+            {id: usuario.rows[0].id},
+            process.env.JWT_SECRET,
+            {expiresIn: '1h'}
+        );
+
+        console.log("login secret: ", process.env.JWT_SECRET);
+        res.json({token});
+
+    } catch (error) {
+        console.log("Erro== " + erro);
+        return res.status(500).json({
+            mensagem: "Erro interno do servidor",
+        });
+    }
+
 });
 
 module.exports = app;

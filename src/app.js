@@ -1,9 +1,11 @@
 require("dotenv").config();
 const express = require("express");
 const pool = require("./config/db");
+const validarUsuarios = require("./validacao/usuarios");
 const validarPost = require("./validacao/post");
 const jwt = require("jsonwebtoken");
 const auth = require("./auth/authLogin");
+
 
 const app = express();
 app.use(express.json());
@@ -11,6 +13,39 @@ app.use(express.json());
 app.get("/", (req, res) => {
     res.send("<h1>Rede Social</h1>")
 });
+
+app.get("/usuarios", async (req, res) => {
+    try {
+        const resultado = await pool.query(`
+            SELECT * FROM usuarios
+            `);
+        res.json(resultado.rows);
+    } catch (erro) {
+        res.status (500).json({
+            erro: "Erro ao buscar dados do usuário"
+        });
+    }
+})
+
+app.post("/usuarios", validarUsuarios, async (req, res) => {
+    try {
+        const {nome, email, senha} = req.body;
+        const resultado = await pool.query(`
+            INSERT INTO usuarios (nome, email, senha)
+            VALUES ($1, $2, $3)
+            RETURNING * `, 
+            [nome, email, senha]
+        );
+        res.status(201).json({
+            mensagem: "Usuário criado com sucesso!",
+            usuario: resultado.rows[0]
+        })
+    } catch (erro) {
+        res.status(500).json({
+            erro: "Erro ao criar usuário"
+        });
+    }
+})
 
 app.get("/posts", async (req, res) => {
     console.log("chegou aqui..1");
@@ -60,10 +95,26 @@ app.post("/posts", auth, validarPost, async (req, res) => {
 
 /// Rota posts PARA ATUALIZAR POST
 
-app.put("/posts/:id", validarPost, async (req, res) => {
+app.put("/posts/:id", auth, validarPost, async (req, res) => {
     try {
-        const {id} = req.params;
-        const {titulo, conteudo} = req.body;
+        const { id } = req.params;
+        const { titulo, conteudo } = req.body;
+
+        const post = await pool.query(`
+                SELECT * FROM post WHERE id=$1
+            `, [id]);
+        
+        if (post.rows.length === 0) {
+            return res.status(404).json({
+                mensagem: "post não encontrado."
+            });
+        }
+
+        if (post.rows[0].usuario_id !== req.usuario.id) {
+            return res.status(403).json({
+                mensagem: "usuário sem permissão"
+            });
+        }
 
         const resultado = await pool.query(
             `UPDATE post SET titulo=$1, conteudo=$2 
@@ -82,9 +133,26 @@ app.put("/posts/:id", validarPost, async (req, res) => {
     }
 });
 
-app.delete("/posts/:id", async (req, res) => {
+app.delete("/posts/:id", auth, async (req, res) => {
     try {
-        const {id} = req.params;
+        const { id } = req.params;
+
+        const post = await pool.query(`
+                SELECT * FROM post WHERE id=$1
+            `, [id]);
+        
+        if (post.rows.length === 0) {
+            return res.status(404).json({
+                mensagem: "post não encontrado."
+            });
+        }
+
+        if (post.rows[0].usuario_id !== req.usuario.id) {
+            return res.status(403).json({
+                mensagem: "usuário sem permissão"
+            });
+        }
+
         const resultado = await pool.query(`
             DELETE FROM post WHERE id =$1
             RETURNING *

@@ -5,10 +5,12 @@ const validarUsuarios = require("./validacao/usuarios");
 const validarPost = require("./validacao/post");
 const jwt = require("jsonwebtoken");
 const auth = require("./auth/authLogin");
-
+const bcrypt = require("bcrypt");
+const cors = require("cors");
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 app.get("/", (req, res) => {
     res.send("<h1>Rede Social</h1>")

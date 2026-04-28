@@ -27,16 +27,19 @@ app.get("/usuarios", async (req, res) => {
             erro: "Erro ao buscar dados do usuário"
         });
     }
-})
+});
 
 app.post("/usuarios", validarUsuarios, async (req, res) => {
     try {
         const {nome, email, senha} = req.body;
+
+        const senhaHash = await bcrypt.hash(senha, 1);
+
         const resultado = await pool.query(`
             INSERT INTO usuarios (nome, email, senha)
             VALUES ($1, $2, $3)
             RETURNING * `, 
-            [nome, email, senha]
+            [nome, email, senhaHash]
         );
         res.status(201).json({
             mensagem: "Usuário criado com sucesso!",
@@ -47,7 +50,7 @@ app.post("/usuarios", validarUsuarios, async (req, res) => {
             erro: "Erro ao criar usuário"
         });
     }
-})
+});
 
 app.get("/posts", async (req, res) => {
     console.log("chegou aqui..1");
@@ -187,7 +190,9 @@ app.post("/login", async (req, res) => {
             });
         }
 
-        if (senha !== usuario.rows[0].senha) {
+        const senhaValida = await bcrypt.compare(senha, usuario.rows[0].senha);
+
+        if (!senhaValida) {
             return res.status(400).json({
                 mensagem: "Senha inválida!"
             });
